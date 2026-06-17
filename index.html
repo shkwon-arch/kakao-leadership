@@ -286,8 +286,8 @@ const PALETTES = [
   { bg: '#1A0D0D', accent: '#FB923C', accent2: '#F472B6' },
 ];
 
-async function drawCard(parsed, originalSentence, paletteIndex, personName, personTeam) {
-  const canvas = document.getElementById('resultCanvas');
+async function drawCard(parsed, originalSentence, paletteIndex, personName, personTeam, targetCanvas) {
+  const canvas = targetCanvas || document.getElementById('resultCanvas');
   const ctx = canvas.getContext('2d');
   const W = 960, H = 1200;
   canvas.width = W; canvas.height = H;
@@ -507,14 +507,16 @@ async function renderGallery(animate) {
       thumbCanvas.style.borderRadius = '11px';
       thumbCanvas.style.display = 'block';
       div.appendChild(thumbCanvas);
-      // 비동기로 카드 그리기
+      // 비동기로 카드 그리기 (canvas 직접 전달, ID 충돌 없음)
       (async () => {
-        const origId = document.getElementById('resultCanvas') ? 'resultCanvas' : null;
-        if (origId) document.getElementById(origId).id = '__rc_tmp';
-        thumbCanvas.id = 'resultCanvas';
-        await drawCard(item.parsed || {headline:'',commitment:'',reflection:'',keyword:''}, item.a2 || '', item.paletteIdx || 0, item.name || '', item.team || '');
-        thumbCanvas.id = '';
-        if (origId) { const el = document.getElementById('__rc_tmp'); if(el) el.id = origId; }
+        await drawCard(
+          item.parsed || {headline:'',commitment:'',reflection:'',keyword:''},
+          item.a2 || '',
+          item.paletteIdx || 0,
+          item.name || '',
+          item.team || '',
+          thumbCanvas
+        );
       })();
       // Name/team overlay
       if (item.name || item.team) {
