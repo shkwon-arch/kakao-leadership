@@ -394,72 +394,55 @@ async function drawCard(parsed, originalSentence, paletteIndex, personName, pers
   return canvas.toDataURL('image/png');
 }
 
-// ── localStorage Backend ──
-const STORAGE_KEY = 'kakao-leadership-gallery-cards';
-
-function lsGet() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch(e) { return null; }
-}
-
-function lsSave(cards) {
-  try {
-    // canvas dataURL이 커서 quota 초과할 수 있으므로 최대 30개 유지
-    const keys = Object.keys(cards);
-    if (keys.length > 30) {
-      keys.sort((a, b) => (cards[a].ts || 0) - (cards[b].ts || 0));
-      keys.slice(0, keys.length - 30).forEach(k => delete cards[k]);
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
-    return true;
-  } catch(e) {
-    console.warn('localStorage 저장 실패:', e);
-    return false;
-  }
-}
+// ── Firebase Realtime Database ──
+const FB_URL = 'https://kakao-leadership-2026-default-rtdb.firebaseio.com';
 
 async function fbGet(path) {
-  return lsGet();
+  try {
+    const r = await fetch(`${FB_URL}/${path}.json`);
+    if (!r.ok) return null;
+    const data = await r.json();
+    // Firebase returns null when empty
+    return data;
+  } catch(e) { return null; }
 }
 
 async function fbPush(path, data) {
   try {
-    const cards = lsGet() || {};
-    const key = '-' + Date.now() + Math.random().toString(36).slice(2, 7);
-    cards[key] = data;
-    lsSave(cards);
-    return { name: key };
-  } catch(e) { return null; }
+    const r = await fetch(`${FB_URL}/${path}.json`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!r.ok) {
+      const err = await r.text();
+      console.error('fbPush 실패:', r.status, err);
+      return null;
+    }
+    return await r.json(); // { name: "-KEY" }
+  } catch(e) { console.error('fbPush error:', e); return null; }
 }
 
 async function fbDelete(path) {
   try {
-    const key = path.replace('cards/', '');
-    const cards = lsGet() || {};
-    delete cards[key];
-    return lsSave(cards);
+    const r = await fetch(`${FB_URL}/${path}.json`, { method: 'DELETE' });
+    return r.ok;
   } catch(e) { return false; }
 }
 
 async function loadGalleryFromStorage() {
-  const data = lsGet();
+  const data = await fbGet('cards');
   if (!data) return [];
   const items = Object.values(data);
   items.sort((a, b) => (b.ts || 0) - (a.ts || 0));
   return items;
 }
 
-async function saveCardToStorage(dataURL, name, team) {
-  const ts = Date.now();
-  const result = await fbPush('cards', { src: dataURL, ts, name, team });
-  return result ? result.name : null;
-}
+// saveCardToStorage deprecated - now saving card data directly in shareToGallery
 
 // ── Seed 7 sample cards on first load ──
 async function seedSampleCards() {
-  const existing = lsGet();
+  const existing = await fbGet('cards');
   if (existing && Object.keys(existing).length >= 7) return;
 
   const offCanvas = document.createElement('canvas');
@@ -476,7 +459,7 @@ async function seedSampleCards() {
     offCanvas.id = '__off';
     document.getElementById('__rc_bak').id = 'resultCanvas';
     const ts = Date.now() - (SEED_SAMPLES.length - i) * 90000;
-    await fbPush('cards', { src: dataURL, ts, name: s.name, team: s.team });
+    await fbPush('cards', { parsed: s.parsed, a2: s.a2, paletteIdx: i, name: s.name, team: s.team, ts });
   }
   offCanvas.remove();
 }
@@ -517,10 +500,22 @@ async function renderGallery(animate) {
       div.dataset.ts = key;
       div.dataset.fbkey = item.fbKey;
       div.style.position = 'relative';
-      const img = document.createElement('img');
-      img.src = item.src;
-      img.alt = '리더십 다짐 카드';
-      div.appendChild(img);
+      // canvas로 카드 그리기 (이미지 저장 없이)
+      const thumbCanvas = document.createElement('canvas');
+      thumbCanvas.width = 960; thumbCanvas.height = 1200;
+      thumbCanvas.style.width = '100%';
+      thumbCanvas.style.borderRadius = '11px';
+      thumbCanvas.style.display = 'block';
+      div.appendChild(thumbCanvas);
+      // 비동기로 카드 그리기
+      (async () => {
+        const origId = document.getElementById('resultCanvas') ? 'resultCanvas' : null;
+        if (origId) document.getElementById(origId).id = '__rc_tmp';
+        thumbCanvas.id = 'resultCanvas';
+        await drawCard(item.parsed || {headline:'',commitment:'',reflection:'',keyword:''}, item.a2 || '', item.paletteIdx || 0, item.name || '', item.team || '');
+        thumbCanvas.id = '';
+        if (origId) { const el = document.getElementById('__rc_tmp'); if(el) el.id = origId; }
+      })();
       // Name/team overlay
       if (item.name || item.team) {
         const overlay = document.createElement('div');
@@ -537,7 +532,11 @@ async function renderGallery(animate) {
         delBtn.onclick = (e) => { e.stopPropagation(); deleteMyCard(item.fbKey, div); };
         div.appendChild(delBtn);
       }
-      div.onclick = () => openLightbox(item.src, item.name, item.team);
+      div.onclick = () => {
+        // lightbox에 canvas 내용을 이미지로 변환해서 표시
+        const dataURL = thumbCanvas.toDataURL('image/png');
+        openLightbox(dataURL, item.name, item.team);
+      };
       if (grid.firstChild && grid.firstChild.dataset && grid.firstChild.dataset.ts) {
         grid.insertBefore(div, grid.firstChild);
       } else {
@@ -657,6 +656,8 @@ async function generate() {
   document.getElementById('genWrap').classList.remove('show');
 
   const paletteIdx = Math.floor(Math.random() * PALETTES.length);
+  // 전역에 카드 데이터 저장 (Firebase 공유용)
+  window._lastCardData = { parsed, a2, paletteIdx, name: personName, team: personTeam, ts: Date.now() };
   generatedDataURL = await drawCard(parsed, a2, paletteIdx, personName, personTeam);
   document.getElementById('resultWrap').classList.add('show');
   document.getElementById('shareBtn').className = 'btn-share';
@@ -668,10 +669,18 @@ let _currentName = '', _currentTeam = '';
 async function shareToGallery() {
   if (!generatedDataURL || sharedThisSession) return;
   sharedThisSession = true;
-  const n = document.getElementById('ansName').value.trim();
-  const t = document.getElementById('ansTeam').value.trim();
-  const fbKey = await saveCardToStorage(generatedDataURL, n, t);
-  if (fbKey) mySharedFbKey = fbKey;
+  const cd = window._lastCardData;
+  if (!cd) return;
+  // 이미지 대신 텍스트 데이터만 저장 (용량 최소화)
+  const result = await fbPush('cards', {
+    parsed: cd.parsed,
+    a2: cd.a2,
+    paletteIdx: cd.paletteIdx,
+    name: cd.name,
+    team: cd.team,
+    ts: cd.ts
+  });
+  if (result) mySharedFbKey = result.name;
   const btn = document.getElementById('shareBtn');
   btn.className = 'share-done';
   btn.textContent = '✓ 갤러리에 공유됨';
