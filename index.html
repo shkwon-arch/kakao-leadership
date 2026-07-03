@@ -215,7 +215,10 @@ canvas#resultCanvas { width: 100%; border-radius: 14px; display: block; }
         <div class="gallery-title">리더십 다짐 갤러리</div>
         <div class="gallery-meta" id="galleryMeta">불러오는 중...</div>
       </div>
-      <div class="gallery-live"><div class="live-dot"></div>LIVE</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <button id="btnDeleteAll" onclick="deleteAllCards()" style="background:rgba(220,50,50,0.12);border:1px solid rgba(220,50,50,0.35);color:#ff8080;border-radius:8px;padding:0.45rem 0.9rem;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">전체 삭제</button>
+        <div class="gallery-live"><div class="live-dot"></div>LIVE</div>
+      </div>
     </div>
     <div class="gallery-grid" id="galleryGrid">
       <div class="gallery-empty">불러오는 중...</div>
@@ -239,21 +242,7 @@ let sharedThisSession = false;
 let galleryPollingInterval = null;
 let lastKnownCount = 0;
 
-// ── 10 sample responses ──
-const SAMPLES = [
-  { team:"카카오 / 서비스기획팀", name:"김민준", a0:"팀원에게 업무를 지시할 때 Why를 충분히 설명하지 않고 What만 전달해온 것 같다", a1:"매주 월요일 팀 회의 첫 5분을 '이번 주 우리가 이 일을 하는 이유' 공유 시간으로 고정한다", a2:"방향을 먼저 열어주고, 길은 함께 만드는 리더", parsed:{headline:"Why를 끊지 않는 리더",commitment:"매주 월요일 팀 회의 첫 5분, Why 공유를 고정한다",reflection:"지시가 아닌 맥락을 전달할 때 팀이 움직인다",keyword:"맥락"}},
-  { team:"카카오 / AI서비스팀", name:"이서연", a0:"변화가 필요한 순간에 결정을 미루고 팀원에게 판단을 떠넘긴 적이 있었다", a1:"불확실한 상황일수록 내가 먼저 방향을 제시하고, 그 후 팀과 함께 보완한다", a2:"불확실함 속에서도 먼저 발을 내딛는 리더", parsed:{headline:"불확실성을 품는 리더",commitment:"불확실할수록 내가 먼저 방향을 제시한다",reflection:"리더의 결단이 팀의 심리적 안전감을 만든다",keyword:"결단"}},
-  { team:"카카오 / 플랫폼개발팀", name:"박지훈", a0:"팀원이 잘못된 방향으로 가고 있어도 관계가 불편해질까봐 솔직한 피드백을 미뤘다", a1:"1on1 미팅에서 긍정 피드백 이후 반드시 개선 피드백 하나를 함께 전달한다", a2:"때로는 불편한 진실을 말해줄 수 있는 리더", parsed:{headline:"솔직함이 신뢰다",commitment:"1on1마다 긍정 피드백 후 개선 포인트 1개를 반드시 전한다",reflection:"진심 어린 피드백이 팀원의 가장 큰 선물이다",keyword:"솔직함"}},
-  { team:"카카오 / 커머스사업팀", name:"최수아", a0:"성과 압박 속에서 팀원의 업무를 직접 수정하고 처리하며 자율성을 빼앗은 것 같다", a1:"업무 결과물에 직접 손대기 전에 '스스로 해결할 수 있는가'를 먼저 묻는다", a2:"팀원이 스스로 성장할 수 있는 공간을 만드는 리더", parsed:{headline:"위임이 곧 성장이다",commitment:"결과물에 손대기 전, 먼저 팀원 스스로 해결하게 한다",reflection:"리더가 한 발 물러날 때 팀원이 앞으로 나온다",keyword:"위임"}},
-  { team:"카카오 / 데이터분석팀", name:"정도현", a0:"팀의 목표와 우선순위를 내 머릿속에서만 갖고 있었고, 팀과 충분히 공유하지 못했다", a1:"분기 목표를 팀원들과 함께 설정하고, 매달 진행 상황을 투명하게 공유한다", a2:"목표를 함께 세우고 과정을 함께 보는 리더", parsed:{headline:"같은 곳을 바라보게 하라",commitment:"분기 목표를 팀과 함께 설정하고 매달 공유한다",reflection:"리더의 목표가 팀의 목표일 때 진짜 몰입이 시작된다",keyword:"방향성"}},
-  { team:"카카오 / UX디자인팀", name:"한예진", a0:"오래된 방식이 익숙하다는 이유로 팀원의 새로운 시도 제안을 무의식 중에 차단해왔다", a1:"팀원이 새 방식을 제안할 때 즉각 반론 대신 '한번 작게 시험해보자'고 먼저 말한다", a2:"경험을 자산으로 쓰되, 경험에 갇히지 않는 리더", parsed:{headline:"경험이 한계가 되지 않도록",commitment:"새 아이디어에 '작게 시험해보자'를 먼저 말한다",reflection:"'해봤자'가 아닌 '해보자'가 팀을 살린다",keyword:"개방성"}},
-  { team:"카카오 / 사업전략팀", name:"오재원", a0:"나 혼자 모든 것을 결정하려 했고, 팀원들이 의사결정 과정에서 소외감을 느꼈을 것 같다", a1:"주요 의사결정 전에 관련 팀원의 의견을 최소 2인 이상 구하는 루틴을 만든다", a2:"혼자 빠르게보다 함께 멀리 가는 리더", parsed:{headline:"함께 결정할 때 더 강해진다",commitment:"주요 결정 전 관련 팀원 2인 이상의 의견을 먼저 듣는다",reflection:"참여한 결정에 팀원들은 더 강하게 헌신한다",keyword:"협업"}},
-  { team:"카카오 / 광고플랫폼팀", name:"윤하은", a0:"팀원의 성과를 인정하고 칭찬하는 것에 인색했던 것 같다. 당연하게 여기는 경우가 많았다", a1:"매주 팀원 한 명의 기여를 구체적으로 팀 전체 앞에서 인정하는 시간을 갖는다", a2:"잘한 것을 크게, 구체적으로 인정해주는 리더", parsed:{headline:"인정이 동기를 만든다",commitment:"매주 팀원 한 명의 기여를 구체적으로 팀 앞에서 인정한다",reflection:"칭찬은 과거를 보상하는 것이 아니라 미래를 이끈다",keyword:"인정"}},
-  { team:"카카오 / 콘텐츠기획팀", name:"임성현", a0:"업무 분배가 특정 팀원에게 집중되는 불균형을 알면서도 개선하지 못했다", a1:"월 1회 팀 업무량 지도를 팀원들과 함께 그려보고 불균형을 공개적으로 논의한다", a2:"공정한 기회를 설계하는 리더", parsed:{headline:"공정한 기회가 공정한 팀을 만든다",commitment:"월 1회 팀 업무량을 팀원과 함께 점검하고 조정한다",reflection:"균형 잡힌 업무 배분이 팀의 지속 가능성을 높인다",keyword:"공정성"}},
-  { team:"카카오 / 글로벌사업팀", name:"강나리", a0:"회사의 변화 방향을 나도 잘 모르면서 팀원들에게 그냥 따르라고만 했던 것 같다", a1:"조직 변화가 있을 때 내가 먼저 상위 리더에게 맥락을 충분히 이해하고 팀에 전달한다", a2:"변화를 두려워하지 않고, 변화를 설명할 수 있는 리더", parsed:{headline:"변화를 번역하는 리더",commitment:"조직 변화 시 먼저 맥락을 충분히 이해하고 팀에 전달한다",reflection:"리더가 변화를 이해해야 팀이 변화를 수용할 수 있다",keyword:"변화관리"}}
-];
 
-// ── Canvas card drawing ──
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
@@ -440,33 +429,24 @@ async function loadGalleryFromStorage() {
 
 // saveCardToStorage deprecated - now saving card data directly in shareToGallery
 
-// ── Seed 7 sample cards on first load ──
-async function seedSampleCards() {
-  const existing = await fbGet('cards');
-  if (existing && Object.keys(existing).length >= 7) return;
-
-  const offCanvas = document.createElement('canvas');
-  offCanvas.width = 960; offCanvas.height = 1200;
-  document.body.appendChild(offCanvas);
-  offCanvas.style.display = 'none';
-
-  const SEED_SAMPLES = SAMPLES.slice(0, 7);
-  for (let i = 0; i < SEED_SAMPLES.length; i++) {
-    const s = SEED_SAMPLES[i];
-    document.getElementById('resultCanvas').id = '__rc_bak';
-    offCanvas.id = 'resultCanvas';
-    const dataURL = await drawCard(s.parsed, s.a2, i, s.name, s.team);
-    offCanvas.id = '__off';
-    document.getElementById('__rc_bak').id = 'resultCanvas';
-    const ts = Date.now() - (SEED_SAMPLES.length - i) * 90000;
-    await fbPush('cards', { parsed: s.parsed, a2: s.a2, paletteIdx: i, name: s.name, team: s.team, ts });
-  }
-  offCanvas.remove();
-}
-
 // ── Gallery render ──
 let renderedKeys = new Set();
 let mySharedFbKey = null; // Firebase key of my shared card
+
+async function deleteAllCards() {
+  const btn = document.getElementById('btnDeleteAll');
+  if (!confirm('갤러리의 모든 카드를 삭제할까요? 이 작업은 되돌릴 수 없습니다.')) return;
+  btn.disabled = true;
+  btn.textContent = '삭제 중...';
+  const ok = await fbDelete('cards');
+  renderedKeys.clear();
+  lastKnownCount = 0;
+  mySharedFbKey = null;
+  await renderGallery(false);
+  btn.disabled = false;
+  btn.textContent = '전체 삭제';
+  if (!ok) alert('삭제 중 문제가 발생했어요. 다시 시도해주세요.');
+}
 
 async function renderGallery(animate) {
   const rawData = await fbGet('cards');
@@ -757,7 +737,6 @@ function closeLightbox() { document.getElementById('lightbox').classList.remove(
 
 // ── Init ──
 (async () => {
-  await seedSampleCards();
   // update badge
   const data = await fbGet('cards');
   const n = data ? Object.keys(data).length : 0;
