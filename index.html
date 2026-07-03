@@ -388,7 +388,7 @@ const FB_URL = 'https://kakao-leadership-2026-default-rtdb.firebaseio.com';
 
 async function fbGet(path) {
   try {
-    const r = await fetch(`${FB_URL}/${path}.json`);
+    const r = await fetch(`${FB_URL}/${path}.json?_=${Date.now()}`, { cache: 'no-store' });
     if (!r.ok) return null;
     const data = await r.json();
     // Firebase returns null when empty
@@ -414,7 +414,7 @@ async function fbPush(path, data) {
 
 async function fbDelete(path) {
   try {
-    const r = await fetch(`${FB_URL}/${path}.json`, { method: 'DELETE' });
+    const r = await fetch(`${FB_URL}/${path}.json`, { method: 'DELETE', cache: 'no-store' });
     return r.ok;
   } catch(e) { return false; }
 }
@@ -433,9 +433,19 @@ async function loadGalleryFromStorage() {
 let renderedKeys = new Set();
 let mySharedFbKey = null; // Firebase key of my shared card
 
+let deleteAllArmed = false;
+let deleteAllArmTimer = null;
 async function deleteAllCards() {
   const btn = document.getElementById('btnDeleteAll');
-  if (!confirm('갤러리의 모든 카드를 삭제할까요? 이 작업은 되돌릴 수 없습니다.')) return;
+  if (!deleteAllArmed) {
+    deleteAllArmed = true;
+    btn.textContent = '정말 삭제? 다시 클릭';
+    clearTimeout(deleteAllArmTimer);
+    deleteAllArmTimer = setTimeout(() => { deleteAllArmed = false; btn.textContent = '전체 삭제'; }, 4000);
+    return;
+  }
+  clearTimeout(deleteAllArmTimer);
+  deleteAllArmed = false;
   btn.disabled = true;
   btn.textContent = '삭제 중...';
   const ok = await fbDelete('cards');
@@ -444,7 +454,8 @@ async function deleteAllCards() {
   mySharedFbKey = null;
   await renderGallery(false);
   btn.disabled = false;
-  btn.textContent = '전체 삭제';
+  btn.textContent = ok ? '삭제 완료' : '전체 삭제';
+  if (ok) setTimeout(() => { btn.textContent = '전체 삭제'; }, 2000);
   if (!ok) alert('삭제 중 문제가 발생했어요. 다시 시도해주세요.');
 }
 
