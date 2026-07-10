@@ -1,0 +1,812 @@
+[index.html](https://github.com/user-attachments/files/29877706/index.html)
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>카카오 리더십 다짐 카드</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  background: #0D0C1D;
+  color: #fff;
+  min-height: 100vh;
+}
+.app { display: flex; flex-direction: column; min-height: 100vh; }
+
+.header {
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.header-logo { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; color: #FFE14D; text-transform: uppercase; }
+.header-sub { font-size: 12px; color: rgba(255,255,255,0.35); }
+
+.tabs { display: flex; padding: 0 2rem; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.tab {
+  padding: 0.9rem 1.4rem; font-size: 13px; color: rgba(255,255,255,0.4);
+  cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap;
+}
+.tab.active { color: #FFE14D; border-bottom-color: #FFE14D; }
+
+.panel { display: none; padding: 2rem; flex: 1; }
+.panel.active { display: flex; flex-direction: column; }
+
+/* FORM */
+.form-wrap { max-width: 540px; width: 100%; margin: 0 auto; }
+.step-indicator { display: flex; gap: 8px; margin-bottom: 2rem; }
+.step-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.15); transition: all 0.3s; }
+.step-dot.done { background: #FFE14D; }
+.step-dot.active { background: #FFE14D; width: 22px; border-radius: 3px; }
+.step-block { display: none; }
+.step-block.active { display: block; }
+.step-num { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: #FFE14D; margin-bottom: 0.5rem; }
+.step-q { font-size: 20px; font-weight: 700; line-height: 1.5; margin-bottom: 0.4rem; }
+.step-hint { font-size: 13px; color: rgba(255,255,255,0.38); margin-bottom: 1.25rem; line-height: 1.65; }
+textarea {
+  width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px; color: #fff; font-family: inherit; font-size: 15px; line-height: 1.7;
+  padding: 1rem 1.2rem; resize: none; outline: none; transition: border-color 0.2s;
+}
+textarea::placeholder { color: rgba(255,255,255,0.18); }
+textarea:focus { border-color: rgba(255,225,77,0.35); }
+.step-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 1.1rem; }
+.btn-back { font-size: 13px; color: rgba(255,255,255,0.35); background: none; border: none; cursor: pointer; padding: 0; }
+.btn-next {
+  background: #FFE14D; color: #0D0C1D; border: none; border-radius: 10px;
+  padding: 0.65rem 1.6rem; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+.btn-next:disabled { opacity: 0.3; cursor: not-allowed; }
+.err { font-size: 12px; color: #ff7070; margin-top: 0.4rem; display: none; }
+.err.show { display: block; }
+
+.gen-wrap { display: none; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 0; gap: 1.25rem; }
+.gen-wrap.show { display: flex; }
+.spinner { width: 36px; height: 36px; border: 2px solid rgba(255,225,77,0.15); border-top-color: #FFE14D; border-radius: 50%; animation: spin 0.75s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.gen-text { font-size: 13px; color: rgba(255,255,255,0.4); }
+
+.result-wrap { display: none; flex-direction: column; align-items: center; gap: 1.25rem; }
+.result-wrap.show { display: flex; }
+.card-canvas-wrap { width: 100%; max-width: 460px; }
+canvas#resultCanvas { width: 100%; border-radius: 14px; display: block; }
+.result-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.btn-action {
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+  color: #fff; border-radius: 9px; padding: 0.6rem 1.3rem; font-size: 13px;
+  font-weight: 500; cursor: pointer; font-family: inherit;
+}
+.btn-share { background: #FFE14D; color: #0D0C1D; border: none; border-radius: 9px; padding: 0.6rem 1.5rem; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.share-done { background: rgba(255,225,77,0.15); color: #FFE14D; border: 1px solid rgba(255,225,77,0.3); border-radius: 9px; padding: 0.6rem 1.5rem; font-size: 13px; font-weight: 600; cursor: default; }
+.btn-kakao { background: #FEE500; color: #3C1E1E; border: none; border-radius: 9px; padding: 0.6rem 1.4rem; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; }
+.btn-kakao:active { filter: brightness(0.93); }
+.copy-toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(10px); background: rgba(30,30,30,0.95); color: #fff; font-size: 13px; padding: 0.6rem 1.4rem; border-radius: 999px; opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 300; }
+.copy-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* GALLERY */
+.gallery-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+.gallery-title { font-size: 16px; font-weight: 700; }
+.gallery-meta { font-size: 12px; color: rgba(255,255,255,0.3); }
+.gallery-live { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #6EE7B7; letter-spacing: 0.05em; }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: #6EE7B7; animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+}
+.gallery-item { border-radius: 11px; overflow: hidden; cursor: pointer; transition: transform 0.18s; }
+.gallery-item:hover { transform: scale(1.025); }
+.gallery-item img { width: 100%; display: block; }
+.gallery-item.new { animation: fadeUp 0.5s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+.gallery-empty { grid-column:1/-1; text-align:center; padding:3.5rem; color:rgba(255,255,255,0.18); font-size:14px; line-height:1.8; }
+
+.lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:200; align-items:center; justify-content:center; padding:2rem; }
+.lightbox.show { display:flex; }
+.lightbox img { max-width:460px; width:100%; border-radius:14px; }
+.lb-close { position:fixed; top:1.25rem; right:1.25rem; background:rgba(255,255,255,0.1); border:none; color:#fff; width:34px; height:34px; border-radius:50%; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+
+/* DELETE BUTTON ON GALLERY CARD */
+.gallery-item .btn-delete {
+  position:absolute; top:7px; right:7px;
+  background:rgba(0,0,0,0.55); border:none; color:#fff;
+  width:26px; height:26px; border-radius:50%; font-size:13px;
+  cursor:pointer; display:none; align-items:center; justify-content:center;
+  backdrop-filter:blur(4px); transition:background 0.15s; z-index:10;
+}
+.gallery-item:hover .btn-delete { display:flex; }
+.gallery-item .btn-delete:hover { background:rgba(220,50,50,0.75); }
+
+
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <span class="header-logo">Kakao Leadership Workshop 2026</span>
+    <span class="header-sub">나의 리더십 다짐 카드</span>
+  </div>
+  <div class="tabs">
+    <div class="tab active" id="tabForm" onclick="switchTab('form')">✦ 카드 만들기</div>
+    <div class="tab" id="tabGallery" onclick="switchTab('gallery')">실시간 갤러리 <span id="badgeCount"></span></div>
+    <div class="tab" id="tabQr" onclick="switchTab('qr')">QR코드</div>
+  </div>
+
+  <!-- FORM PANEL -->
+  <div class="panel active" id="panelForm">
+    <div class="form-wrap">
+      <div class="step-indicator">
+        <div class="step-dot active" id="dot0"></div>
+        <div class="step-dot" id="dot1"></div>
+        <div class="step-dot" id="dot2"></div>
+        <div class="step-dot" id="dot3"></div>
+      </div>
+
+      <!-- Step 0: 소속 / 이름 -->
+      <div class="step-block active" id="step0">
+        <div class="step-num">STEP 01 / 04</div>
+        <div class="step-q">소속과 이름을<br>입력해주세요</div>
+        <div class="step-hint">카드와 갤러리에 표시됩니다</div>
+        <input type="text" id="ansTeam" placeholder="예: 카카오 / 서비스개발팀" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#fff;font-family:inherit;font-size:15px;padding:0.85rem 1.2rem;outline:none;margin-bottom:10px;transition:border-color 0.2s;" onfocus="this.style.borderColor='rgba(255,225,77,0.35)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+        <input type="text" id="ansName" placeholder="예: 홍길동" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#fff;font-family:inherit;font-size:15px;padding:0.85rem 1.2rem;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='rgba(255,225,77,0.35)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+        <div class="err" id="err0">이름을 입력해주세요</div>
+        <div class="step-nav"><span></span><button class="btn-next" onclick="nextStep(0)">다음 →</button></div>
+      </div>
+
+      <!-- Step 1 -->
+      <div class="step-block" id="step1">
+        <div class="step-num">STEP 02 / 04</div>
+        <div class="step-q">오늘 가장 크게 공감한<br>리더십 이슈는 무엇인가요?</div>
+        <div class="step-hint">강의·토론에서 '아, 이건 내 얘기다' 싶었던 것</div>
+        <textarea id="ans0" rows="4" placeholder="예: 팀원에게 Why를 충분히 설명하지 못한 것 같다"></textarea>
+        <div class="err" id="err1">내용을 입력해주세요</div>
+        <div class="step-nav"><button class="btn-back" onclick="prevStep(1)">← 이전</button><button class="btn-next" onclick="nextStep(1)">다음 →</button></div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step-block" id="step2">
+        <div class="step-num">STEP 03 / 04</div>
+        <div class="step-q">내일부터 바꿀<br>행동 한 가지는?</div>
+        <div class="step-hint">구체적일수록 좋아요. '잘 하겠다'보다 '무엇을 언제 어떻게'</div>
+        <textarea id="ans1" rows="4" placeholder="예: 주간 회의 시작 전 3분씩 이번 주 과제의 Why를 공유한다"></textarea>
+        <div class="err" id="err2">내용을 입력해주세요</div>
+        <div class="step-nav"><button class="btn-back" onclick="prevStep(2)">← 이전</button><button class="btn-next" onclick="nextStep(2)">다음 →</button></div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step-block" id="step3">
+        <div class="step-num">STEP 04 / 04</div>
+        <div class="step-q">나의 리더십을<br>한 문장으로 표현한다면?</div>
+        <div class="step-hint">지금 내가 지향하는 리더의 모습</div>
+        <textarea id="ans2" rows="3" placeholder="예: 방향을 먼저 열어주고, 길은 함께 만드는 리더"></textarea>
+        <div class="err" id="err3">내용을 입력해주세요</div>
+        <div class="step-nav"><button class="btn-back" onclick="prevStep(3)">← 이전</button><button class="btn-next" onclick="generate()">카드 생성하기 ✦</button></div>
+      </div>
+
+      <div class="gen-wrap" id="genWrap">
+        <div class="spinner"></div>
+        <div class="gen-text" id="genText">AI가 나만의 다짐을 만들고 있어요...</div>
+      </div>
+
+      <div class="result-wrap" id="resultWrap">
+        <div class="card-canvas-wrap"><canvas id="resultCanvas" width="960" height="1200"></canvas></div>
+        <div class="result-actions">
+          <button class="btn-action" onclick="downloadCard()">💾 저장</button>
+          <button class="btn-action" id="nativeShareBtn" onclick="nativeShare()" style="display:none;">↗️ 공유</button>
+          <button class="btn-action" onclick="copyImageLink()">🔗 링크 복사</button>
+          <button class="btn-action" onclick="resetForm()">다시 만들기</button>
+        </div>
+        <div class="result-actions" style="margin-top:4px;">
+          <button class="btn-kakao" id="kakaoShareBtn" onclick="shareKakao()">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="vertical-align:middle;margin-right:5px"><path d="M9 1C4.582 1 1 3.896 1 7.455c0 2.29 1.53 4.303 3.845 5.44L3.9 16.2a.3.3 0 00.456.316L8.4 13.87c.197.016.396.024.6.024 4.418 0 8-2.896 8-6.44C17 3.896 13.418 1 9 1z" fill="#3C1E1E"/></svg>
+            카카오톡으로 공유
+          </button>
+          <button class="btn-share" id="shareBtn" onclick="shareToGallery()">갤러리에 공유 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GALLERY PANEL -->
+  <div class="panel" id="panelGallery">
+    <div class="gallery-top">
+      <div>
+        <div class="gallery-title">리더십 다짐 갤러리</div>
+        <div class="gallery-meta" id="galleryMeta">불러오는 중...</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <button id="btnDeleteAll" onclick="deleteAllCards()" style="background:rgba(220,50,50,0.12);border:1px solid rgba(220,50,50,0.35);color:#ff8080;border-radius:8px;padding:0.45rem 0.9rem;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">전체 삭제</button>
+        <div class="gallery-live"><div class="live-dot"></div>LIVE</div>
+      </div>
+    </div>
+    <div class="gallery-grid" id="galleryGrid">
+      <div class="gallery-empty">불러오는 중...</div>
+    </div>
+  </div>
+
+  <!-- QR PANEL -->
+  <div class="panel" id="panelQr">
+    <div style="max-width:360px;width:100%;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:1.5rem;padding:2rem 0;">
+      <div style="text-align:center;">
+        <div style="font-size:16px;font-weight:700;margin-bottom:6px;">참여 QR코드</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.6;">스캔하면 카카오 리더십 워크숍 다짐 카드<br>페이지로 연결됩니다</div>
+      </div>
+      <div id="qrBox" style="background:#fff;padding:20px;border-radius:16px;display:flex;align-items:center;justify-content:center;"></div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.3);word-break:break-all;text-align:center;" id="qrUrlLabel"></div>
+      <button class="btn-action" id="qrDownloadBtn" onclick="downloadQr()">QR코드 다운로드</button>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lb-close" onclick="closeLightbox()">✕</button>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:10px" onclick="event.stopPropagation()">
+    <img id="lbImg" src="" alt="">
+    <p id="saveTip" style="display:none;font-size:12px;color:rgba(255,255,255,0.4);text-align:center">이미지를 길게 누르거나 우클릭 → 이미지 저장</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+// ── State ──
+let currentStep = 0;
+let generatedDataURL = null;
+let sharedThisSession = false;
+let galleryPollingInterval = null;
+let lastKnownCount = 0;
+
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r); ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+}
+
+function wrapText(ctx, text, x, y, maxW, lineH) {
+  if (!text) return y;
+  const chars = text.split('');
+  let line = '', cy = y;
+  for (let i = 0; i < chars.length; i++) {
+    const test = line + chars[i];
+    if (ctx.measureText(test).width > maxW && line !== '') {
+      ctx.fillText(line, x, cy); line = chars[i]; cy += lineH;
+    } else { line = test; }
+  }
+  ctx.fillText(line, x, cy);
+  return cy + lineH;
+}
+
+// Color palettes for variety
+const PALETTES = [
+  { bg: '#0D0C1D', accent: '#FFE14D', accent2: '#C084FC' },
+  { bg: '#0A1628', accent: '#60C9FF', accent2: '#34D399' },
+  { bg: '#150D28', accent: '#F472B6', accent2: '#A78BFA' },
+  { bg: '#0D1F1A', accent: '#34D399', accent2: '#60C9FF' },
+  { bg: '#1A0D0D', accent: '#FB923C', accent2: '#F472B6' },
+];
+
+async function drawCard(parsed, originalSentence, paletteIndex, personName, personTeam, targetCanvas) {
+  const canvas = targetCanvas || document.getElementById('resultCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = 960, H = 1200;
+  canvas.width = W; canvas.height = H;
+
+  const pal = PALETTES[paletteIndex % PALETTES.length] || PALETTES[0];
+
+  ctx.fillStyle = pal.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Decorative circles
+  const drawArc = (x, y, r, color, alpha) => {
+    ctx.save(); ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  };
+  drawArc(820, 180, 280, pal.accent, 0.06);
+  drawArc(820, 180, 190, pal.accent, 0.05);
+  drawArc(820, 180, 110, pal.accent, 0.07);
+  drawArc(100, 1060, 210, pal.accent2, 0.05);
+  drawArc(100, 1060, 130, pal.accent2, 0.06);
+
+  // Top gradient line
+  const grd = ctx.createLinearGradient(80, 0, W - 80, 0);
+  grd.addColorStop(0, 'transparent'); grd.addColorStop(0.3, pal.accent);
+  grd.addColorStop(0.7, pal.accent2); grd.addColorStop(1, 'transparent');
+  ctx.strokeStyle = grd; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(80, 96); ctx.lineTo(W - 80, 96); ctx.stroke();
+
+  // Logo label
+  ctx.font = '700 20px -apple-system, sans-serif';
+  ctx.fillStyle = pal.accent; ctx.globalAlpha = 0.85;
+  ctx.fillText('KAKAO LEADERSHIP WORKSHOP 2026', 80, 144);
+  ctx.globalAlpha = 1;
+
+  // Keyword badge
+  const kw = parsed.keyword || '변화';
+  ctx.font = '700 24px -apple-system, sans-serif';
+  const kwW = ctx.measureText(kw).width + 48;
+  ctx.fillStyle = pal.accent + '22'; ctx.strokeStyle = pal.accent + '55'; ctx.lineWidth = 1;
+  roundRect(ctx, 80, 174, kwW, 48, 24); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = pal.accent; ctx.textBaseline = 'middle';
+  ctx.fillText(kw, 104, 174 + 24); ctx.textBaseline = 'alphabetic';
+
+  // Headline
+  ctx.font = '700 60px -apple-system, sans-serif';
+  ctx.fillStyle = '#FFFFFF';
+  wrapText(ctx, parsed.headline || '', 80, 300, W - 160, 74);
+
+  // Divider
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(80, 450); ctx.lineTo(W - 80, 450); ctx.stroke();
+
+  // Commitment
+  ctx.font = '500 21px -apple-system, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.32)';
+  ctx.fillText('나의 다짐', 80, 500);
+  ctx.font = '500 32px -apple-system, sans-serif';
+  ctx.fillStyle = '#FFFFFF';
+  wrapText(ctx, parsed.commitment || '', 80, 546, W - 160, 42);
+
+  // Reflection
+  ctx.font = '500 21px -apple-system, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.32)';
+  ctx.fillText('오늘의 성찰', 80, 700);
+  ctx.font = '400 29px -apple-system, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  wrapText(ctx, parsed.reflection || '', 80, 745, W - 160, 38);
+
+  // Quote
+  ctx.font = '700 32px -apple-system, sans-serif';
+  ctx.fillStyle = pal.accent2 + '66';
+  ctx.fillText('"', 80, 900);
+  ctx.font = '400 italic 27px -apple-system, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.38)';
+  wrapText(ctx, originalSentence.slice(0, 52), 110, 900, W - 200, 38);
+
+  // Bottom bar
+  ctx.fillStyle = 'rgba(255,255,255,0.03)';
+  ctx.fillRect(0, H - 110, W, 110);
+
+  // Name & team (left)
+  if (personName) {
+    ctx.font = '600 26px -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillText(personName, 80, H - 62);
+  }
+  if (personTeam) {
+    ctx.font = '400 20px -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillText(personTeam, 80, H - 34);
+  }
+
+  // Date (right)
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
+  ctx.font = '400 20px -apple-system, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.textAlign = 'right';
+  ctx.fillText(dateStr, W - 80, H - 62);
+  ctx.fillText('Kakao Leadership Workshop', W - 80, H - 34);
+  ctx.textAlign = 'left';
+
+  return canvas.toDataURL('image/png');
+}
+
+// ── Firebase Realtime Database ──
+const FB_URL = 'https://kakao-leadership-2026-default-rtdb.firebaseio.com';
+
+async function fbGet(path) {
+  try {
+    const r = await fetch(`${FB_URL}/${path}.json?_=${Date.now()}`, { cache: 'no-store' });
+    if (!r.ok) return null;
+    const data = await r.json();
+    // Firebase returns null when empty
+    return data;
+  } catch(e) { return null; }
+}
+
+async function fbPush(path, data) {
+  try {
+    const r = await fetch(`${FB_URL}/${path}.json`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!r.ok) {
+      const err = await r.text();
+      console.error('fbPush 실패:', r.status, err);
+      return null;
+    }
+    return await r.json(); // { name: "-KEY" }
+  } catch(e) { console.error('fbPush error:', e); return null; }
+}
+
+async function fbDelete(path) {
+  try {
+    const r = await fetch(`${FB_URL}/${path}.json`, { method: 'DELETE', cache: 'no-store' });
+    return r.ok;
+  } catch(e) { return false; }
+}
+
+async function loadGalleryFromStorage() {
+  const data = await fbGet('cards');
+  if (!data) return [];
+  const items = Object.values(data);
+  items.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  return items;
+}
+
+// saveCardToStorage deprecated - now saving card data directly in shareToGallery
+
+// ── Gallery render ──
+let renderedKeys = new Set();
+let mySharedFbKey = null; // Firebase key of my shared card
+
+let deleteAllArmed = false;
+let deleteAllArmTimer = null;
+async function deleteAllCards() {
+  const btn = document.getElementById('btnDeleteAll');
+  if (!deleteAllArmed) {
+    deleteAllArmed = true;
+    btn.textContent = '정말 삭제? 다시 클릭';
+    clearTimeout(deleteAllArmTimer);
+    deleteAllArmTimer = setTimeout(() => { deleteAllArmed = false; btn.textContent = '전체 삭제'; }, 4000);
+    return;
+  }
+  clearTimeout(deleteAllArmTimer);
+  deleteAllArmed = false;
+  btn.disabled = true;
+  btn.textContent = '삭제 중...';
+  const ok = await fbDelete('cards');
+  renderedKeys.clear();
+  lastKnownCount = 0;
+  mySharedFbKey = null;
+  await renderGallery(false);
+  btn.disabled = false;
+  btn.textContent = ok ? '삭제 완료' : '전체 삭제';
+  if (ok) setTimeout(() => { btn.textContent = '전체 삭제'; }, 2000);
+  if (!ok) alert('삭제 중 문제가 발생했어요. 다시 시도해주세요.');
+}
+
+async function renderGallery(animate) {
+  const rawData = await fbGet('cards');
+  const grid = document.getElementById('galleryGrid');
+  const meta = document.getElementById('galleryMeta');
+  const badge = document.getElementById('badgeCount');
+
+  if (!rawData) {
+    grid.innerHTML = '<div class="gallery-empty">아직 공유된 카드가 없어요.<br>첫 번째로 다짐을 남겨보세요 ✦</div>';
+    renderedKeys.clear();
+    meta.textContent = '0명이 공유함';
+    badge.textContent = '';
+    lastKnownCount = 0;
+    return;
+  }
+
+  // rawData is { fbKey: {src, ts, name, team}, ... }
+  const entries = Object.entries(rawData).map(([fbKey, val]) => ({ fbKey, ...val }));
+  entries.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+
+  meta.textContent = `${entries.length}명이 공유함`;
+  badge.textContent = entries.length > 0 ? `(${entries.length})` : '';
+  lastKnownCount = entries.length;
+
+  // Add new items only
+  for (const item of entries) {
+    const key = String(item.ts);
+    if (!renderedKeys.has(key)) {
+      const div = document.createElement('div');
+      div.className = 'gallery-item' + (animate ? ' new' : '');
+      div.dataset.ts = key;
+      div.dataset.fbkey = item.fbKey;
+      div.style.position = 'relative';
+      // canvas로 카드 그리기 (이미지 저장 없이)
+      const thumbCanvas = document.createElement('canvas');
+      thumbCanvas.width = 960; thumbCanvas.height = 1200;
+      thumbCanvas.style.width = '100%';
+      thumbCanvas.style.borderRadius = '11px';
+      thumbCanvas.style.display = 'block';
+      div.appendChild(thumbCanvas);
+      // 비동기로 카드 그리기 (canvas 직접 전달, ID 충돌 없음)
+      (async () => {
+        await drawCard(
+          item.parsed || {headline:'',commitment:'',reflection:'',keyword:''},
+          item.a2 || '',
+          item.paletteIdx || 0,
+          item.name || '',
+          item.team || '',
+          thumbCanvas
+        );
+      })();
+      // Name/team overlay
+      if (item.name || item.team) {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.75));padding:20px 10px 10px;border-radius:0 0 11px 11px;pointer-events:none;';
+        overlay.innerHTML = `<div style="font-size:12px;font-weight:600;color:#fff;line-height:1.3;">${item.name||''}</div><div style="font-size:10px;color:rgba(255,255,255,0.55);margin-top:2px;">${item.team||''}</div>`;
+        div.appendChild(overlay);
+      }
+      // Delete button — only for my own card
+      if (item.fbKey === mySharedFbKey) {
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn-delete';
+        delBtn.textContent = '✕';
+        delBtn.title = '내 카드 삭제';
+        delBtn.onclick = (e) => { e.stopPropagation(); deleteMyCard(item.fbKey, div); };
+        div.appendChild(delBtn);
+      }
+      div.onclick = () => {
+        // lightbox에 canvas 내용을 이미지로 변환해서 표시
+        const dataURL = thumbCanvas.toDataURL('image/png');
+        openLightbox(dataURL, item.name, item.team);
+      };
+      if (grid.firstChild && grid.firstChild.dataset && grid.firstChild.dataset.ts) {
+        grid.insertBefore(div, grid.firstChild);
+      } else {
+        grid.innerHTML = '';
+        grid.appendChild(div);
+      }
+      renderedKeys.add(key);
+    }
+  }
+}
+
+async function deleteMyCard(fbKey, divEl) {
+  if (!confirm('내 카드를 갤러리에서 삭제할까요?')) return;
+  const ok = await fbDelete(`cards/${fbKey}`);
+  if (!ok) { alert('삭제에 실패했어요. 잠시 후 다시 시도해주세요.'); return; }
+  // UI 즉시 반영
+  renderedKeys.delete(divEl.dataset.ts);
+  divEl.remove();
+  mySharedFbKey = null;
+  sharedThisSession = false;
+  // 공유 버튼 초기화 → 다시 공유 가능
+  const shareBtn = document.getElementById('shareBtn');
+  if (shareBtn) {
+    shareBtn.className = 'btn-share';
+    shareBtn.textContent = '갤러리에 공유 →';
+    shareBtn.onclick = shareToGallery;
+  }
+  lastKnownCount = Math.max(0, lastKnownCount - 1);
+  document.getElementById('badgeCount').textContent = lastKnownCount > 0 ? `(${lastKnownCount})` : '';
+  document.getElementById('galleryMeta').textContent = `${lastKnownCount}명이 공유함`;
+}
+
+async function pollGallery() {
+  const data = await fbGet('cards');
+  const count = data ? Object.keys(data).length : 0;
+  if (count !== lastKnownCount) {
+    await renderGallery(true);
+  }
+}
+
+// ── Form logic ──
+function nextStep(step) {
+  // step0 = name/team, step1~3 = textarea ans0~2
+  let val;
+  if (step === 0) {
+    val = document.getElementById('ansName').value.trim();
+    if (!val) { document.getElementById('err0').classList.add('show'); return; }
+    document.getElementById('err0').classList.remove('show');
+  } else {
+    const ansId = 'ans' + (step - 1);
+    val = document.getElementById(ansId).value.trim();
+    if (!val) { document.getElementById('err' + step).classList.add('show'); return; }
+    document.getElementById('err' + step).classList.remove('show');
+  }
+  document.getElementById('step' + step).classList.remove('active');
+  document.getElementById('dot' + step).classList.remove('active');
+  document.getElementById('dot' + step).classList.add('done');
+  currentStep = step + 1;
+  document.getElementById('step' + currentStep).classList.add('active');
+  document.getElementById('dot' + currentStep).classList.add('active');
+}
+function prevStep(step) {
+  document.getElementById('step' + step).classList.remove('active');
+  document.getElementById('dot' + (step-1)).classList.remove('done');
+  document.getElementById('dot' + (step-1)).classList.add('active');
+  document.getElementById('dot' + step).classList.remove('active');
+  currentStep = step - 1;
+  document.getElementById('step' + currentStep).classList.add('active');
+}
+
+const GEN_MSGS = ['AI가 나만의 다짐을 만들고 있어요...','문구를 다듬는 중...','카드를 디자인하는 중...'];
+
+async function generate() {
+  const val = document.getElementById('ans2').value.trim();
+  if (!val) { document.getElementById('err3').classList.add('show'); return; }
+  document.getElementById('err3').classList.remove('show');
+  document.getElementById('step3').classList.remove('active');
+  document.getElementById('genWrap').classList.add('show');
+
+  const personName = document.getElementById('ansName').value.trim();
+  const personTeam = document.getElementById('ansTeam').value.trim();
+  const a0 = document.getElementById('ans0').value.trim();
+  const a1 = document.getElementById('ans1').value.trim();
+  const a2 = document.getElementById('ans2').value.trim();
+  sharedThisSession = false;
+
+  let mi = 0;
+  const iv = setInterval(() => { mi=(mi+1)%GEN_MSGS.length; document.getElementById('genText').textContent=GEN_MSGS[mi]; }, 1800);
+
+  let parsed;
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: `당신은 리더십 코치입니다. 카카오 리더의 워크숍 성찰 내용을 바탕으로 다짐 카드 문구를 JSON으로만 출력하세요. 다른 텍스트 없이 JSON만.
+
+입력:
+- 공감한 이슈: ${a0}
+- 바꿀 행동: ${a1}
+- 나의 리더십 한 문장: ${a2}
+
+출력 형식:
+{"headline":"임팩트있는 리더십 선언 (18자 이내)","commitment":"구체적 다짐 (40자 이내, 행동 중심)","reflection":"오늘의 성찰 한 줄 (35자 이내, 따뜻하게)","keyword":"핵심 키워드 (6자 이내)"}` }]
+      })
+    });
+    const data = await resp.json();
+    let text = data.content.map(c => c.text||'').join('').replace(/```json|```/g,'').trim();
+    parsed = JSON.parse(text);
+  } catch(e) {
+    parsed = { headline: a2.slice(0,18), commitment: a1.slice(0,40), reflection: a0.slice(0,35), keyword: '변화' };
+  }
+
+  clearInterval(iv);
+  document.getElementById('genWrap').classList.remove('show');
+
+  const paletteIdx = Math.floor(Math.random() * PALETTES.length);
+  // 전역에 카드 데이터 저장 (Firebase 공유용)
+  window._lastCardData = { parsed, a2, paletteIdx, name: personName, team: personTeam, ts: Date.now() };
+  generatedDataURL = await drawCard(parsed, a2, paletteIdx, personName, personTeam);
+  document.getElementById('resultWrap').classList.add('show');
+  document.getElementById('shareBtn').className = 'btn-share';
+  document.getElementById('shareBtn').textContent = '갤러리에 공유 →';
+  document.getElementById('shareBtn').onclick = shareToGallery;
+}
+
+let _currentName = '', _currentTeam = '';
+async function shareToGallery() {
+  if (!generatedDataURL || sharedThisSession) return;
+  sharedThisSession = true;
+  const cd = window._lastCardData;
+  if (!cd) return;
+  // 이미지 대신 텍스트 데이터만 저장 (용량 최소화)
+  const result = await fbPush('cards', {
+    parsed: cd.parsed,
+    a2: cd.a2,
+    paletteIdx: cd.paletteIdx,
+    name: cd.name,
+    team: cd.team,
+    ts: cd.ts
+  });
+  if (result) mySharedFbKey = result.name;
+  const btn = document.getElementById('shareBtn');
+  btn.className = 'share-done';
+  btn.textContent = '✓ 갤러리에 공유됨';
+  btn.onclick = null;
+  const data = await fbGet('cards');
+  const cnt = data ? Object.keys(data).length : 0;
+  document.getElementById('badgeCount').textContent = cnt > 0 ? `(${cnt})` : '';
+}
+
+function downloadCard() {
+  if (!generatedDataURL) return;
+  // Open image in new tab — user can long-press (mobile) or right-click → Save As (desktop)
+  const win = window.open('', '_blank');
+  if (win) {
+    win.document.write(`<!DOCTYPE html><html><head><title>리더십 다짐 카드</title>
+    <style>body{margin:0;background:#0D0C1D;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;font-family:sans-serif;}
+    img{max-width:480px;width:90%;border-radius:14px;}
+    p{color:rgba(255,255,255,0.4);font-size:13px;}</style></head>
+    <body><img src="${generatedDataURL}" alt="리더십 다짐 카드">
+    <p>이미지를 길게 누르거나 우클릭 → 이미지 저장</p></body></html>`);
+    win.document.close();
+  } else {
+    // fallback: show in lightbox with save tip
+    document.getElementById('lbImg').src = generatedDataURL;
+    document.getElementById('lightbox').classList.add('show');
+    document.getElementById('saveTip').style.display = 'block';
+  }
+  // Visual feedback on button
+  const btn = event.currentTarget;
+  const orig = btn.textContent;
+  btn.textContent = '✓ 새 탭에서 열림';
+  btn.style.opacity = '0.6';
+  setTimeout(() => { btn.textContent = orig; btn.style.opacity = ''; }, 2000);
+}
+
+function resetForm() {
+  document.getElementById('resultWrap').classList.remove('show');
+  ['ans0','ans1','ans2'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ansName').value = '';
+  document.getElementById('ansTeam').value = '';
+  ['err0','err1','err2','err3'].forEach(id => document.getElementById(id).classList.remove('show'));
+  for (let i = 0; i <= 3; i++) {
+    document.getElementById('step'+i).classList.remove('active');
+    document.getElementById('dot'+i).classList.remove('active','done');
+  }
+  document.getElementById('step0').classList.add('active');
+  document.getElementById('dot0').classList.add('active');
+  currentStep = 0; generatedDataURL = null; sharedThisSession = false;
+}
+
+function switchTab(name) {
+  document.getElementById('tabForm').classList.toggle('active', name==='form');
+  document.getElementById('tabGallery').classList.toggle('active', name==='gallery');
+  document.getElementById('tabQr').classList.toggle('active', name==='qr');
+  document.getElementById('panelForm').classList.toggle('active', name==='form');
+  document.getElementById('panelGallery').classList.toggle('active', name==='gallery');
+  document.getElementById('panelQr').classList.toggle('active', name==='qr');
+  if (name === 'gallery') renderGallery(false);
+  if (name === 'qr') renderQr();
+}
+
+const QR_TARGET_URL = 'https://shkwon-arch.github.io/kakao-leadership/';
+let qrRendered = false;
+function renderQr() {
+  if (qrRendered) return;
+  qrRendered = true;
+  document.getElementById('qrUrlLabel').textContent = QR_TARGET_URL;
+  new QRCode(document.getElementById('qrBox'), {
+    text: QR_TARGET_URL,
+    width: 220,
+    height: 220,
+    colorDark: '#0D0C1D',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+}
+function downloadQr() {
+  const box = document.getElementById('qrBox');
+  const canvas = box.querySelector('canvas');
+  const img = box.querySelector('img');
+  const dataUrl = canvas ? canvas.toDataURL('image/png') : (img ? img.src : null);
+  if (!dataUrl) return;
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = 'kakao-leadership-qr.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  const btn = document.getElementById('qrDownloadBtn');
+  const orig = btn.textContent;
+  btn.textContent = '✓ 다운로드됨';
+  setTimeout(() => { btn.textContent = orig; }, 1800);
+}
+
+function openLightbox(src, name, team) {
+  document.getElementById('lbImg').src = src;
+  const tip = document.getElementById('saveTip');
+  if (name || team) {
+    tip.style.display = 'block';
+    tip.textContent = [name, team].filter(Boolean).join('  ·  ');
+    tip.style.color = 'rgba(255,255,255,0.55)';
+  } else {
+    tip.style.display = 'none';
+  }
+  document.getElementById('lightbox').classList.add('show');
+}
+function closeLightbox() { document.getElementById('lightbox').classList.remove('show'); }
+
+// ── Init ──
+(async () => {
+  // update badge
+  const data = await fbGet('cards');
+  const n = data ? Object.keys(data).length : 0;
+  document.getElementById('badgeCount').textContent = n > 0 ? `(${n})` : '';
+  // poll every 5s for new cards
+  galleryPollingInterval = setInterval(pollGallery, 5000);
+})();
+</script>
+</body>
+</html>
