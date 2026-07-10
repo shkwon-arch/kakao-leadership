@@ -125,12 +125,13 @@ canvas#resultCanvas { width: 100%; border-radius: 14px; display: block; }
 <body>
 <div class="app">
   <div class="header">
-    <span class="header-logo">Kakao Leadership Forum 2026</span>
+    <span class="header-logo">Kakao Leadership Workshop 2026</span>
     <span class="header-sub">나의 리더십 다짐 카드</span>
   </div>
   <div class="tabs">
     <div class="tab active" id="tabForm" onclick="switchTab('form')">✦ 카드 만들기</div>
     <div class="tab" id="tabGallery" onclick="switchTab('gallery')">실시간 갤러리 <span id="badgeCount"></span></div>
+    <div class="tab" id="tabQr" onclick="switchTab('qr')">QR코드</div>
   </div>
 
   <!-- FORM PANEL -->
@@ -224,6 +225,19 @@ canvas#resultCanvas { width: 100%; border-radius: 14px; display: block; }
       <div class="gallery-empty">불러오는 중...</div>
     </div>
   </div>
+
+  <!-- QR PANEL -->
+  <div class="panel" id="panelQr">
+    <div style="max-width:360px;width:100%;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:1.5rem;padding:2rem 0;">
+      <div style="text-align:center;">
+        <div style="font-size:16px;font-weight:700;margin-bottom:6px;">참여 QR코드</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.6;">스캔하면 카카오 리더십 워크숍 다짐 카드<br>페이지로 연결됩니다</div>
+      </div>
+      <div id="qrBox" style="background:#fff;padding:20px;border-radius:16px;display:flex;align-items:center;justify-content:center;"></div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.3);word-break:break-all;text-align:center;" id="qrUrlLabel"></div>
+      <button class="btn-action" id="qrDownloadBtn" onclick="downloadQr()">QR코드 다운로드</button>
+    </div>
+  </div>
 </div>
 
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
@@ -234,6 +248,7 @@ canvas#resultCanvas { width: 100%; border-radius: 14px; display: block; }
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 // ── State ──
 let currentStep = 0;
@@ -309,7 +324,7 @@ async function drawCard(parsed, originalSentence, paletteIndex, personName, pers
   // Logo label
   ctx.font = '700 20px -apple-system, sans-serif';
   ctx.fillStyle = pal.accent; ctx.globalAlpha = 0.85;
-  ctx.fillText('KAKAO LEADERSHIP FORUM 2026', 80, 144);
+  ctx.fillText('KAKAO LEADERSHIP WORKSHOP 2026', 80, 144);
   ctx.globalAlpha = 1;
 
   // Keyword badge
@@ -727,9 +742,45 @@ function resetForm() {
 function switchTab(name) {
   document.getElementById('tabForm').classList.toggle('active', name==='form');
   document.getElementById('tabGallery').classList.toggle('active', name==='gallery');
+  document.getElementById('tabQr').classList.toggle('active', name==='qr');
   document.getElementById('panelForm').classList.toggle('active', name==='form');
   document.getElementById('panelGallery').classList.toggle('active', name==='gallery');
+  document.getElementById('panelQr').classList.toggle('active', name==='qr');
   if (name === 'gallery') renderGallery(false);
+  if (name === 'qr') renderQr();
+}
+
+const QR_TARGET_URL = 'https://shkwon-arch.github.io/kakao-leadership/';
+let qrRendered = false;
+function renderQr() {
+  if (qrRendered) return;
+  qrRendered = true;
+  document.getElementById('qrUrlLabel').textContent = QR_TARGET_URL;
+  new QRCode(document.getElementById('qrBox'), {
+    text: QR_TARGET_URL,
+    width: 220,
+    height: 220,
+    colorDark: '#0D0C1D',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+}
+function downloadQr() {
+  const box = document.getElementById('qrBox');
+  const canvas = box.querySelector('canvas');
+  const img = box.querySelector('img');
+  const dataUrl = canvas ? canvas.toDataURL('image/png') : (img ? img.src : null);
+  if (!dataUrl) return;
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = 'kakao-leadership-qr.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  const btn = document.getElementById('qrDownloadBtn');
+  const orig = btn.textContent;
+  btn.textContent = '✓ 다운로드됨';
+  setTimeout(() => { btn.textContent = orig; }, 1800);
 }
 
 function openLightbox(src, name, team) {
