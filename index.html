@@ -22,6 +22,32 @@ body {
 .header-logo { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; color: #FFE14D; text-transform: uppercase; }
 .header-sub { font-size: 12px; color: rgba(255,255,255,0.35); }
 
+.round-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 0.7rem 2rem; background: rgba(255,225,77,0.04);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.round-bar-label { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4); letter-spacing: 0.04em; white-space: nowrap; }
+.round-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.round-btn {
+  min-width: 30px; height: 30px; padding: 0 8px; border-radius: 8px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.55); font-size: 12px; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: all 0.15s;
+}
+.round-btn:hover { border-color: rgba(255,225,77,0.4); color: #fff; }
+.round-btn.active { background: #FFE14D; color: #0D0C1D; border-color: #FFE14D; }
+.round-bar-current { margin-left: auto; font-size: 12px; color: #FFE14D; font-weight: 600; white-space: nowrap; }
+
+.gallery-filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.1rem; }
+.gfilter-chip {
+  padding: 0.4rem 0.85rem; border-radius: 999px; font-size: 12px; font-weight: 600;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5); cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.gfilter-chip:hover { border-color: rgba(255,225,77,0.35); color: #fff; }
+.gfilter-chip.active { background: #FFE14D; color: #0D0C1D; border-color: #FFE14D; }
+
 .tabs { display: flex; padding: 0 2rem; border-bottom: 1px solid rgba(255,255,255,0.08); }
 .tab {
   padding: 0.9rem 1.4rem; font-size: 13px; color: rgba(255,255,255,0.4);
@@ -128,6 +154,11 @@ canvas#resultCanvas { width: 100%; border-radius: 14px; display: block; }
     <span class="header-logo">Kakao Leadership Workshop 2026</span>
     <span class="header-sub">나의 리더십 다짐 카드</span>
   </div>
+  <div class="round-bar">
+    <span class="round-bar-label">참여 차수</span>
+    <div class="round-btns" id="roundBtns"></div>
+    <span class="round-bar-current" id="roundCurrentLabel"></span>
+  </div>
   <div class="tabs">
     <div class="tab active" id="tabForm" onclick="switchTab('form')">✦ 카드 만들기</div>
     <div class="tab" id="tabGallery" onclick="switchTab('gallery')">실시간 갤러리 <span id="badgeCount"></span></div>
@@ -221,6 +252,7 @@ canvas#resultCanvas { width: 100%; border-radius: 14px; display: block; }
         <div class="gallery-live"><div class="live-dot"></div>LIVE</div>
       </div>
     </div>
+    <div class="gallery-filter" id="galleryFilter"></div>
     <div class="gallery-grid" id="galleryGrid">
       <div class="gallery-empty">불러오는 중...</div>
     </div>
@@ -256,6 +288,38 @@ let generatedDataURL = null;
 let sharedThisSession = false;
 let galleryPollingInterval = null;
 let lastKnownCount = 0;
+
+// ── 차수(Round) 관리 ──
+const TOTAL_ROUNDS = 7;
+let currentRound = parseInt(localStorage.getItem('leadershipRound') || '1', 10);
+if (!currentRound || currentRound < 1 || currentRound > TOTAL_ROUNDS) currentRound = 1;
+let galleryFilter = 'all'; // 'all' | 1~7
+
+function initRoundBar() {
+  const wrap = document.getElementById('roundBtns');
+  wrap.innerHTML = '';
+  for (let i = 1; i <= TOTAL_ROUNDS; i++) {
+    const b = document.createElement('button');
+    b.className = 'round-btn' + (i === currentRound ? ' active' : '');
+    b.textContent = i + '차';
+    b.onclick = () => selectRound(i);
+    wrap.appendChild(b);
+  }
+  updateRoundCurrentLabel();
+}
+
+function selectRound(r) {
+  currentRound = r;
+  localStorage.setItem('leadershipRound', String(r));
+  document.querySelectorAll('#roundBtns .round-btn').forEach((btn, idx) => {
+    btn.classList.toggle('active', idx + 1 === r);
+  });
+  updateRoundCurrentLabel();
+}
+
+function updateRoundCurrentLabel() {
+  document.getElementById('roundCurrentLabel').textContent = `현재 ${currentRound}차로 저장됩니다`;
+}
 
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -450,28 +514,68 @@ let mySharedFbKey = null; // Firebase key of my shared card
 
 let deleteAllArmed = false;
 let deleteAllArmTimer = null;
+function deleteAllBtnLabel() {
+  return galleryFilter === 'all' ? '전체 삭제' : `${galleryFilter}차 삭제`;
+}
 async function deleteAllCards() {
   const btn = document.getElementById('btnDeleteAll');
+  const label = deleteAllBtnLabel();
   if (!deleteAllArmed) {
     deleteAllArmed = true;
     btn.textContent = '정말 삭제? 다시 클릭';
     clearTimeout(deleteAllArmTimer);
-    deleteAllArmTimer = setTimeout(() => { deleteAllArmed = false; btn.textContent = '전체 삭제'; }, 4000);
+    deleteAllArmTimer = setTimeout(() => { deleteAllArmed = false; btn.textContent = deleteAllBtnLabel(); }, 4000);
     return;
   }
   clearTimeout(deleteAllArmTimer);
   deleteAllArmed = false;
   btn.disabled = true;
   btn.textContent = '삭제 중...';
-  const ok = await fbDelete('cards');
+
+  let ok = true;
+  if (galleryFilter === 'all') {
+    ok = await fbDelete('cards');
+  } else {
+    // 현재 필터(차수)에 해당하는 카드만 삭제
+    const rawData = await fbGet('cards');
+    if (rawData) {
+      const keysToDelete = Object.entries(rawData)
+        .filter(([, val]) => (val.round || 1) === galleryFilter)
+        .map(([fbKey]) => fbKey);
+      const results = await Promise.all(keysToDelete.map(k => fbDelete(`cards/${k}`)));
+      ok = results.every(Boolean);
+    }
+  }
+
   renderedKeys.clear();
+  lastRenderedFilter = null;
   lastKnownCount = 0;
   mySharedFbKey = null;
   await renderGallery(false);
   btn.disabled = false;
-  btn.textContent = ok ? '삭제 완료' : '전체 삭제';
-  if (ok) setTimeout(() => { btn.textContent = '전체 삭제'; }, 2000);
+  btn.textContent = ok ? '삭제 완료' : deleteAllBtnLabel();
+  if (ok) setTimeout(() => { btn.textContent = deleteAllBtnLabel(); }, 2000);
   if (!ok) alert('삭제 중 문제가 발생했어요. 다시 시도해주세요.');
+}
+
+let lastRenderedFilter = null;
+
+function renderGalleryFilterChips(counts, total) {
+  const wrap = document.getElementById('galleryFilter');
+  wrap.innerHTML = '';
+  const makeChip = (label, val, count) => {
+    const chip = document.createElement('button');
+    chip.className = 'gfilter-chip' + (galleryFilter === val ? ' active' : '');
+    chip.textContent = `${label} (${count})`;
+    chip.onclick = () => { galleryFilter = val; renderGallery(false); };
+    wrap.appendChild(chip);
+  };
+  makeChip('전체', 'all', total);
+  for (let i = 1; i <= TOTAL_ROUNDS; i++) makeChip(i + '차', i, counts[i] || 0);
+  if (!deleteAllArmed) {
+    const delBtn = document.getElementById('btnDeleteAll');
+    if (delBtn) delBtn.textContent = deleteAllBtnLabel();
+  }
 }
 
 async function renderGallery(animate) {
@@ -483,19 +587,41 @@ async function renderGallery(animate) {
   if (!rawData) {
     grid.innerHTML = '<div class="gallery-empty">아직 공유된 카드가 없어요.<br>첫 번째로 다짐을 남겨보세요 ✦</div>';
     renderedKeys.clear();
+    lastRenderedFilter = null;
+    renderGalleryFilterChips({}, 0);
     meta.textContent = '0명이 공유함';
     badge.textContent = '';
     lastKnownCount = 0;
     return;
   }
 
-  // rawData is { fbKey: {src, ts, name, team}, ... }
-  const entries = Object.entries(rawData).map(([fbKey, val]) => ({ fbKey, ...val }));
-  entries.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  // rawData is { fbKey: {src, ts, name, team, round}, ... }
+  const allEntries = Object.entries(rawData).map(([fbKey, val]) => ({ fbKey, round: 1, ...val }));
+  allEntries.sort((a, b) => (b.ts || 0) - (a.ts || 0));
 
-  meta.textContent = `${entries.length}명이 공유함`;
-  badge.textContent = entries.length > 0 ? `(${entries.length})` : '';
-  lastKnownCount = entries.length;
+  const counts = {};
+  allEntries.forEach(e => { const r = e.round || 1; counts[r] = (counts[r] || 0) + 1; });
+  renderGalleryFilterChips(counts, allEntries.length);
+
+  const entries = galleryFilter === 'all' ? allEntries : allEntries.filter(e => (e.round || 1) === galleryFilter);
+
+  if (galleryFilter !== lastRenderedFilter) {
+    grid.innerHTML = '';
+    renderedKeys.clear();
+    lastRenderedFilter = galleryFilter;
+    animate = false;
+  }
+
+  meta.textContent = galleryFilter === 'all'
+    ? `${allEntries.length}명이 공유함`
+    : `${galleryFilter}차 · ${entries.length}명이 공유함 (전체 ${allEntries.length}명)`;
+  badge.textContent = allEntries.length > 0 ? `(${allEntries.length})` : '';
+  lastKnownCount = allEntries.length;
+
+  if (entries.length === 0) {
+    grid.innerHTML = `<div class="gallery-empty">${galleryFilter}차에는 아직 공유된 카드가 없어요.</div>`;
+    return;
+  }
 
   // Add new items only
   for (const item of entries) {
@@ -524,6 +650,11 @@ async function renderGallery(animate) {
           thumbCanvas
         );
       })();
+      // Round badge
+      const roundTag = document.createElement('div');
+      roundTag.textContent = (item.round || 1) + '차';
+      roundTag.style.cssText = 'position:absolute;top:7px;left:7px;background:rgba(255,225,77,0.9);color:#0D0C1D;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;';
+      div.appendChild(roundTag);
       // Name/team overlay
       if (item.name || item.team) {
         const overlay = document.createElement('div');
@@ -665,7 +796,7 @@ async function generate() {
 
   const paletteIdx = Math.floor(Math.random() * PALETTES.length);
   // 전역에 카드 데이터 저장 (Firebase 공유용)
-  window._lastCardData = { parsed, a2, paletteIdx, name: personName, team: personTeam, ts: Date.now() };
+  window._lastCardData = { parsed, a2, paletteIdx, name: personName, team: personTeam, ts: Date.now(), round: currentRound };
   generatedDataURL = await drawCard(parsed, a2, paletteIdx, personName, personTeam);
   document.getElementById('resultWrap').classList.add('show');
   document.getElementById('shareBtn').className = 'btn-share';
@@ -686,7 +817,8 @@ async function shareToGallery() {
     paletteIdx: cd.paletteIdx,
     name: cd.name,
     team: cd.team,
-    ts: cd.ts
+    ts: cd.ts,
+    round: cd.round || 1
   });
   if (result) mySharedFbKey = result.name;
   const btn = document.getElementById('shareBtn');
@@ -798,6 +930,7 @@ function openLightbox(src, name, team) {
 function closeLightbox() { document.getElementById('lightbox').classList.remove('show'); }
 
 // ── Init ──
+initRoundBar();
 (async () => {
   // update badge
   const data = await fbGet('cards');
