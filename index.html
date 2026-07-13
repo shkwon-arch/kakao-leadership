@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>카카오 리더십 다짐 카드</title>
+<title>2026 Kakao Leader Workshop</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -151,7 +151,7 @@ canvas#resultCanvas { width: 100%; border-radius: 14px; display: block; }
 <body>
 <div class="app">
   <div class="header">
-    <span class="header-logo">Kakao Leadership Workshop 2026</span>
+    <span class="header-logo">2026 Kakao Leader Workshop</span>
     <span class="header-sub">나의 리더십 다짐 카드</span>
   </div>
   <div class="round-bar">
@@ -178,19 +178,19 @@ canvas#resultCanvas { width: 100%; border-radius: 14px; display: block; }
       <!-- Step 0: 소속 / 이름 -->
       <div class="step-block active" id="step0">
         <div class="step-num">STEP 01 / 04</div>
-        <div class="step-q">소속과 이름을<br>입력해주세요</div>
-        <div class="step-hint">카드와 갤러리에 표시됩니다</div>
-        <input type="text" id="ansTeam" placeholder="예: 카카오 / 서비스개발팀" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#fff;font-family:inherit;font-size:15px;padding:0.85rem 1.2rem;outline:none;margin-bottom:10px;transition:border-color 0.2s;" onfocus="this.style.borderColor='rgba(255,225,77,0.35)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
-        <input type="text" id="ansName" placeholder="예: 홍길동" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#fff;font-family:inherit;font-size:15px;padding:0.85rem 1.2rem;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='rgba(255,225,77,0.35)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
-        <div class="err" id="err0">이름을 입력해주세요</div>
+        <div class="step-q">소속부서와 LDAP을<br>입력해주세요</div>
+        <div class="step-hint">예시) 서비스개발 / ryan.kakao</div>
+        <input type="text" id="ansTeam" placeholder="예: 서비스개발" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#fff;font-family:inherit;font-size:15px;padding:0.85rem 1.2rem;outline:none;margin-bottom:10px;transition:border-color 0.2s;" onfocus="this.style.borderColor='rgba(255,225,77,0.35)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+        <input type="text" id="ansName" placeholder="예: ryan.kakao" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#fff;font-family:inherit;font-size:15px;padding:0.85rem 1.2rem;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='rgba(255,225,77,0.35)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+        <div class="err" id="err0">소속부서와 LDAP을 입력해주세요</div>
         <div class="step-nav"><span></span><button class="btn-next" onclick="nextStep(0)">다음 →</button></div>
       </div>
 
       <!-- Step 1 -->
       <div class="step-block" id="step1">
         <div class="step-num">STEP 02 / 04</div>
-        <div class="step-q">오늘 가장 크게 공감한<br>리더십 이슈는 무엇인가요?</div>
-        <div class="step-hint">강의·토론에서 '아, 이건 내 얘기다' 싶었던 것</div>
+        <div class="step-q">오늘 워크숍을 통해<br>새롭게 생각해보게 된<br>한 가지는 무엇인가요?</div>
+        <div class="step-hint"></div>
         <textarea id="ans0" rows="4" placeholder="예: 팀원에게 Why를 충분히 설명하지 못한 것 같다"></textarea>
         <div class="err" id="err1">내용을 입력해주세요</div>
         <div class="step-nav"><button class="btn-back" onclick="prevStep(1)">← 이전</button><button class="btn-next" onclick="nextStep(1)">다음 →</button></div>
@@ -199,8 +199,8 @@ canvas#resultCanvas { width: 100%; border-radius: 14px; display: block; }
       <!-- Step 2 -->
       <div class="step-block" id="step2">
         <div class="step-num">STEP 03 / 04</div>
-        <div class="step-q">내일부터 바꿀<br>행동 한 가지는?</div>
-        <div class="step-hint">구체적일수록 좋아요. '잘 하겠다'보다 '무엇을 언제 어떻게'</div>
+        <div class="step-q">오늘 다룬 키워드, 논의내용 등과 연결하여,<br>나의 행동에서 새롭게 시도해보겠다고<br>약속하는 행동 하나를 정해주세요.</div>
+        <div class="step-hint">&lt;형식&gt; ___할 때(상황), ___한다 (행동)<br>🙂고려할 점: 한 달 뒤 팀원이 알아챌 수 있는 변화인가?</div>
         <textarea id="ans1" rows="4" placeholder="예: 주간 회의 시작 전 3분씩 이번 주 과제의 Why를 공유한다"></textarea>
         <div class="err" id="err2">내용을 입력해주세요</div>
         <div class="step-nav"><button class="btn-back" onclick="prevStep(2)">← 이전</button><button class="btn-next" onclick="nextStep(2)">다음 →</button></div>
@@ -209,9 +209,8 @@ canvas#resultCanvas { width: 100%; border-radius: 14px; display: block; }
       <!-- Step 3 -->
       <div class="step-block" id="step3">
         <div class="step-num">STEP 04 / 04</div>
-        <div class="step-q">나의 리더십을<br>한 문장으로 표현한다면?</div>
-        <div class="step-hint">지금 내가 지향하는 리더의 모습</div>
-        <textarea id="ans2" rows="3" placeholder="예: 방향을 먼저 열어주고, 길은 함께 만드는 리더"></textarea>
+        <div class="step-q">이번 워크숍 이후,<br>내가 되고 싶은 리더의 모습을<br>표현한다면?</div>
+        <textarea id="ans2" rows="3" placeholder="예: 방향을 밝히는 리더 / 끝까지 듣는 리더"></textarea>
         <div class="err" id="err3">내용을 입력해주세요</div>
         <div class="step-nav"><button class="btn-back" onclick="prevStep(3)">← 이전</button><button class="btn-next" onclick="generate()">카드 생성하기 ✦</button></div>
       </div>
@@ -389,7 +388,7 @@ async function drawCard(parsed, originalSentence, paletteIndex, personName, pers
   // Logo label
   ctx.font = '700 20px -apple-system, sans-serif';
   ctx.fillStyle = pal.accent; ctx.globalAlpha = 0.85;
-  ctx.fillText('KAKAO LEADERSHIP WORKSHOP 2026', 80, 144);
+  ctx.fillText('2026 KAKAO LEADER WORKSHOP', 80, 144);
   ctx.globalAlpha = 1;
 
   // Keyword badge
@@ -457,7 +456,7 @@ async function drawCard(parsed, originalSentence, paletteIndex, personName, pers
   ctx.fillStyle = 'rgba(255,255,255,0.25)';
   ctx.textAlign = 'right';
   ctx.fillText(dateStr, W - 80, H - 62);
-  ctx.fillText('Kakao Leadership Workshop', W - 80, H - 34);
+  ctx.fillText('2026 Kakao Leader Workshop', W - 80, H - 34);
   ctx.textAlign = 'left';
 
   return canvas.toDataURL('image/png');
@@ -808,9 +807,9 @@ async function generate() {
         messages: [{ role: 'user', content: `당신은 리더십 코치입니다. 카카오 리더의 워크숍 성찰 내용을 바탕으로 다짐 카드 문구를 JSON으로만 출력하세요. 다른 텍스트 없이 JSON만.
 
 입력:
-- 공감한 이슈: ${a0}
-- 바꿀 행동: ${a1}
-- 나의 리더십 한 문장: ${a2}
+- 새롭게 생각해보게 된 것: ${a0}
+- 새롭게 시도해보겠다고 약속하는 행동: ${a1}
+- 되고 싶은 리더의 모습: ${a2}
 
 출력 형식:
 {"headline":"임팩트있는 리더십 선언 (18자 이내)","commitment":"구체적 다짐 (40자 이내, 행동 중심)","reflection":"오늘의 성찰 한 줄 (35자 이내, 따뜻하게)","keyword":"핵심 키워드 (6자 이내)"}` }]
